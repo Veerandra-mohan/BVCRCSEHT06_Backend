@@ -2,14 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin SDK using environment variables
-// This is crucial for security and deployment on Render
+// Parse the service account JSON from the new environment variable
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
 admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Handle newline characters
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  })
+  credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore(); // Initialize Firestore
 
