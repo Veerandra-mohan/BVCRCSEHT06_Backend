@@ -1,73 +1,62 @@
 const express = require('express');
 const router = express.Router();
-const { sql, poolPromise } = require('../config/db');
 
-// GET all enrollments
+module.exports = (db) => {
+
 router.get('/', async (req, res) => {
   try {
-    const pool = await poolPromise;
-    const result = await pool.request().query('SELECT * FROM Enrollments');
-    res.json(result.recordset);
+    const enrollmentsRef = db.collection('enrollments');
+    const snapshot = await enrollmentsRef.get();
+    const enrollments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(enrollments);
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-// GET enrollments by studentId
 router.get('/student/:studentId', async (req, res) => {
   try {
     const { studentId } = req.params;
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('studentId', sql.Int, studentId)
-      .query('SELECT * FROM Enrollments WHERE studentId = @studentId');
-    res.json(result.recordset);
+    const enrollmentsRef = db.collection('enrollments');
+    const snapshot = await enrollmentsRef.where('studentId', '==', studentId).get();
+    const enrollments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(enrollments);
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-// GET enrollments by courseId
 router.get('/course/:courseId', async (req, res) => {
   try {
     const { courseId } = req.params;
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('courseId', sql.Int, courseId)
-      .query('SELECT * FROM Enrollments WHERE courseId = @courseId');
-    res.json(result.recordset);
+    const enrollmentsRef = db.collection('enrollments');
+    const snapshot = await enrollmentsRef.where('courseId', '==', courseId).get();
+    const enrollments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(enrollments);
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-// POST a new enrollment
 router.post('/', async (req, res) => {
   try {
     const { studentId, courseId } = req.body;
-    const pool = await poolPromise;
-    await pool.request()
-      .input('studentId', sql.Int, studentId)
-      .input('courseId', sql.Int, courseId)
-      .query('INSERT INTO Enrollments (studentId, courseId) VALUES (@studentId, @courseId)');
-    res.status(201).send('Enrollment created');
+    const newEnrollmentRef = await db.collection('enrollments').add({ studentId, courseId });
+    res.status(201).json({ id: newEnrollmentRef.id, studentId, courseId });
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-// DELETE an enrollment
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const pool = await poolPromise;
-    await pool.request()
-      .input('id', sql.Int, id)
-      .query('DELETE FROM Enrollments WHERE id = @id');
+    await db.collection('enrollments').doc(id).delete();
     res.send('Enrollment deleted');
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-module.exports = router;
+return router;
+};
